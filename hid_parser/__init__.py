@@ -8,6 +8,7 @@ import sys
 import textwrap
 import typing
 import warnings
+import re
 
 from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, TextIO, Tuple, Union
 
@@ -1068,3 +1069,24 @@ class ReportDescriptor():
 
                 elif tag == TagLocal.DELIMITER:
                     printl(f'Delemiter ({data})')
+
+    @classmethod
+    def from_str(cls, report: str):
+        """Build a ReportDescriptor from a text report.
+        The report shall be formatted in a C-style array of hex numbers, with possible comments at the end of the lines.
+        https://eleccelerator.com/usbdescreqparser/
+            0x05, 0x01,        // Usage Page (Generic Desktop Ctrls)
+            0x09, 0x06,        // Usage (Keyboard)
+            0xA1, 0x01,        // Collection (Application)
+            ...
+        """
+        data = []
+        for line in report.splitlines():
+            # Strip comments
+            if '//' in line:
+                line, comment = line.split('//', 1)
+            line = line.strip()
+            # Get all 0x.. values
+            for byte in re.finditer(r'0x([0-9A-Fa-f]{2})', line):
+                data.append(int(byte.group(1), 16))
+        return cls(data)
